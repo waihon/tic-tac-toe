@@ -13,7 +13,7 @@ function Board({ xIsNext, squares, onPlay }) {
     if (calculateWinner(squares) || squares[i]) {
       return;
     }
-    const nextSquares = squares.slice();
+    const nextSquares = squares.slice(); // create a copy
     if (xIsNext) {
       nextSquares[i] = "X";
     } else {
@@ -53,14 +53,49 @@ function Board({ xIsNext, squares, onPlay }) {
 }
 
 export default function Game() {
-  const [xIsNext, setXIsNext] = useState(true);
   const [history, setHistory] = useState([Array(9).fill(null)]);
-  const currentSquares = history[history.length - 1];
+  // Keep track of which step the user is currently viewing
+  const [currentMove, setCurrentMove] = useState(0);
+  const xIsNext = currentMove % 2 === 0;
+  // Render the currently selected move, instead of always rendering
+  // the final move.
+  const currentSquares = history[currentMove];
 
   function handlePlay(nextSquares) {
-    setHistory([...history, nextSquares]);
-    setXIsNext(!xIsNext);
+    // If you "go back in time" and then make a new move from that point,
+    // you only want to keep the history up to that point. Instead of adding
+    // nextSquares after all items (... spread syntax) in history, you'll
+    // add it after all items in history.slice(0, currnetMove + 1) so that
+    // you're only keeping that portion of the old history.
+    const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+    setHistory(nextHistory);
+    // Each time a move is made, you need to update currentMove to point
+    // to the latest history entry.
+    setCurrentMove(nextHistory.length - 1);
   }
+
+  function jumpTo(nextMove) {
+    setCurrentMove(nextMove);
+  }
+
+  const moves = history.map((squares, move) => {
+    let description;
+    if (move > 0) {
+      description = "Go to move #" + move;
+    } else {
+      description = "Go to game start";
+    }
+    return (
+      // In the tic-tac-toe game's history, each past move has a
+      // unique ID associated with it: it's the sequential number
+      // of the move. Moves will never be re-ordered, deleted, or
+      // inserted in the middle, so it's safe to use the move index
+      // as a key.
+      <li key={move}>
+        <button onClick={() => jumpTo(move)}>{description}</button>
+      </li>
+    );
+  });
 
   return (
     <div className="game">
@@ -68,7 +103,7 @@ export default function Game() {
         <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
       </div>
       <div className="game-info">
-        <ol>{/*TODO*/}</ol>
+        <ol>{moves}</ol>
       </div>
     </div>
   );
@@ -91,5 +126,4 @@ function calculateWinner(squares) {
       return squares[a];
     }
   }
-  return null;
 }
